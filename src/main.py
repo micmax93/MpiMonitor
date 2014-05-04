@@ -1,81 +1,107 @@
+import time
+import datetime
 from my_mpi import *
-from access_controller import *
-from lockers_monitor import *
-from shower_monitor import *
+from shared_monitor import SharedMonitor
+
+monitor = SharedMonitor()
+monitor.start()
+
+# mx = monitor.get_mutex('mutex')
+# mx.lock()
+# print('Yea!')
+# mx.unlock()
 
 
-def job_done():
-    """
-    Informs process about finished task loop
-    """
-    data = {'cmd': 'job_done', 'rank': mpi_rank(), 'name': mpi_rank()}
-    mpi_send(mpi_rank(), data)
+# var_ns = monitor.get_variables('my_namespace')
+# var_ns.lock()
+#
+# if var_ns.version == 0:
+#    var_ns.set('counter', 1)
+#
+# while var_ns.get('counter') < 50:
+#     counter = var_ns.get('counter')
+#     print('@', counter)
+#     var_ns.set('counter', counter+1)
+#     var_ns.commit()
+#
+# var_ns.unlock()
 
 
-def job_finished():
-    """
-    Informs all processes in "world" about finishing all loops
-    """
-    data = {'cmd': 'job_done', 'rank': mpi_rank(), 'name': mpi_rank()}
-    mpi_bcast(data)
+# buffer = monitor.get_variables('buffer')
+# full = monitor.get_conditional('full')
+# empty = monitor.get_conditional('empty')
+#
+#
+# buffer.lock()
+# if buffer.version == 0:
+#     print('Setting initial values @by ', monitor.id)
+#     buffer.set('curr', 0)
+#     buffer.set('max', 5)
+#     buffer.set('data', [])
+# buffer.unlock()
+#
+#
+# def add(val):
+#     buffer.lock()
+#     while buffer.get('curr') == buffer.get('max'):
+#         full.wait(buffer)
+#
+#     data = buffer.get('data')
+#     data.append(val)
+#     print(monitor.id, ' @add ', val)
+#     curr = buffer.get('curr')
+#     curr += 1
+#     buffer.set('data', data)
+#     buffer.set('curr', curr)
+#
+#     empty.signal()  # if one
+#     buffer.unlock()
+#
+#
+# def get():
+#     buffer.lock()
+#     while buffer.get('curr') == 0:
+#         empty.wait(buffer)
+#
+#     data = buffer.get('data')
+#     value = data.pop(0)
+#     print(monitor.id, ' @get ', value)
+#     curr = buffer.get('curr')
+#     curr -= 1
+#     buffer.set('data', data)
+#     buffer.set('curr', curr)
+#
+#     full.signal()  # if full-1
+#     buffer.unlock()
+#     return value
+#
+# n = 0
+# while n < 20:
+#     time.sleep(0.1)
+#     n += 1
+#     if monitor.id == 0:
+#         add(n)
+#     else:
+#         val = get()
+#         if val >= 20:
+#             exit()
 
 
-if __name__ == '__main__':
+cv = monitor.get_conditional('alert')
+mx = monitor.get_mutex('mutex')
 
-    mpi_barrier()
-    q = {}
+if mpi_rank() == 0:
+    time.sleep(2)
+    cv.signal_all()
+    # n = 1
+    # while n < mpi_count():
+    #     time.sleep(0.5)
+    #     cv.signal()
+    #     n += 1
+else:
+    mx.lock()
+    cv.wait(mx)
+    print(mpi_rank(), ' @ Done')
+    mx.unlock()
 
-    gender = get_rand_gender()  # Przypisanie płci do procesu
-    q['lockers'] = AccessController('lockers', gender, LockersMonitor())  # Kolejka odpowiedzialna za szatnie
-    q['showers'] = AccessController('showers', gender, ShowerMonitor())  # Kolejka odpowiedzialna za natrysk
-
-    LOCKER_DELAY = get_rand_timeout(LOCKER_TIMEOUT)  # Czas spędzony w szatni
-    SHOWER_DELAY = get_rand_timeout(SHOWER_TIMEOUT)  # Czas spędzony pod natryskiem
-    POOL_DELAY = get_rand_timeout(POOL_TIMEOUT)  # Czas spędzony w basenie
-
-    # Po uzyskaniu dostępu do szatni, proces dokona próby wejścia pod natrysk
-    q['lockers'].set_access_func(LOCKER_DELAY, q['showers'].enter)
-
-    # Po wejściu pod natrysk i odczekaniu, proces wyjdzie z pod natrysku
-    q['showers'].set_access_func(SHOWER_DELAY, q['showers'].exit)
-
-    # Po wyjściu z pod natrysku proces wykonuje timeout, który odzwierciedla czas spędzony na basenie
-    # Po wyjściu z basenu następuje wywołanie wyjścia z szatni
-    q['showers'].set_exit_func(POOL_DELAY, q['lockers'].exit)
-
-    # Po wyjściu z szatni proces informuje o wykonaniu zadania
-    q['lockers'].set_exit_func(0, job_done)
-
-    # Ilość pętli jakie wykonuje każdy proces (-1) dla nieskonczoności
-    loops = 1
-
-    finished = 0
-    q['lockers'].enter()  #Powiadomienie o chęci wejścia do szatni
-
-    while True:
-        data = mpi_recv()
-        name = data['name']
-        #say("Received com ", data)
-        if data['cmd'] == 'request':
-            q[name].on_request(data['rank'], data)
-
-        elif data['cmd'] == 'allowed':
-            q[name].on_confirmation(data['rank'], data)
-
-        elif data['cmd'] == 'update':
-            q[name].on_update(data['rank'], data)
-
-        elif data['cmd'] == 'job_done':
-            if loops == -1:
-                q['lockers'].enter()
-            elif data['rank'] == mpi_rank():
-                loops -= 1
-                if loops > 0:
-                    q['lockers'].enter()
-                else:
-                    finished += 1
-                    job_finished()
-            else:
-                finished += 1
-            if finished == mpi_count():
-                break
+monitor.stop()

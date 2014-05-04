@@ -1,4 +1,5 @@
 from mpi4py import MPI
+import time
 
 
 def mpi_send(target, data, tag=0):
