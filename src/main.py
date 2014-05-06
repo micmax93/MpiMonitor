@@ -26,7 +26,7 @@ monitor.start()
 #
 # var_ns.unlock()
 
-
+id = monitor.id
 buffer = monitor.get_variables('buffer')
 full = monitor.get_conditional('full')
 empty = monitor.get_conditional('empty')
@@ -36,7 +36,7 @@ buffer.lock()
 if buffer.version == 0:
     print('Setting initial values @by ', monitor.id)
     buffer.set('curr', 0)
-    buffer.set('max', 5)
+    buffer.set('max', 10)
     buffer.set('data', [])
 buffer.unlock()
 
@@ -49,7 +49,7 @@ def producer(limit):
             full.wait(buffer)
         data = buffer.get('data')
         data.append(val)
-        print(monitor.id, ' @add ', val)
+        print('+', val, ' add @by ', id)
         curr = buffer.get('curr')
         curr += 1
         buffer.set('data', data)
@@ -60,25 +60,25 @@ def producer(limit):
 
 
 def consumer(limit):
-    buffer.lock()
-    n = 0
+    n = 1
     while n<limit:
+        buffer.lock()
         while buffer.get('curr') == 0:
             empty.wait(buffer)
         data = buffer.get('data')
         value = data.pop(0)
-        print(monitor.id, ' @get ', value)
         curr = buffer.get('curr')
         curr -= 1
         buffer.set('data', data)
         buffer.set('curr', curr)
         n += 1
         full.signal()  # if full-1
-    buffer.unlock()
+        buffer.unlock()
+        print('-', value, ' get @by ', id)
 
 prod = 50
 cons = prod / (mpi_count()-1)
-if mpi_rank() == 0:
+if id == 0:
     producer(prod)
 else:
     consumer(cons)
