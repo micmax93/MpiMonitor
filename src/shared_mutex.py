@@ -46,7 +46,7 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
         say("Sending confirms to: ", self.waiting_set)
         for e in self.waiting_set:
             self.send_confirmation(e)
-        self.waiting_set.clear()
+        self.waiting_set = []
         self.confirmations_tab = [False] * mpi_count()
         #mpi_send(mpi_rank(), self.mk_msg('job_done'))
 
