@@ -55,7 +55,7 @@ class SharedMonitor(SharedContext):
                 #say("Received com ", data)
                 if data['cmd'] == 'request':
                     self.get_raw(name).on_request(data['rank'], data)
-                elif data['cmd'] == 'allowed':
+                elif data['cmd'] == 'confirm':
                     self.get_raw(name).on_confirmation(data['rank'], data)
                 elif data['cmd'] == 'signal':
                     self.get_raw(name).on_signal(data['rank'], data)

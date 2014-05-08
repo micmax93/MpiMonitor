@@ -36,7 +36,7 @@ buffer.lock()
 if buffer.version == 0:
     print('Setting initial values @by ', monitor.id)
     buffer.set('curr', 0)
-    buffer.set('max', 10)
+    buffer.set('max', mpi_count()*2)
     buffer.set('data', [])
 buffer.unlock()
 
@@ -44,9 +44,12 @@ buffer.unlock()
 def producer(limit):
     buffer.lock()
     val = 0
+    start = 0
     while val < limit:
         while buffer.get('curr') == buffer.get('max'):
+            print('Added ', val-start, ' values @by ', id)
             full.wait(buffer)
+            start = val
         data = buffer.get('data')
         data.append(val)
         print('+', val, ' add @by ', id)
@@ -76,8 +79,9 @@ def consumer(limit):
         buffer.unlock()
         print('-', value, ' get @by ', id)
 
-prod = 50
-cons = prod / (mpi_count()-1)
+cons = 15
+prod = cons * (mpi_count()-1)
+
 if id == 0:
     producer(prod)
 else:

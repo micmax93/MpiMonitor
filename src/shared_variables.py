@@ -16,7 +16,7 @@ class SharedVariables(SharedMutex):
         data = {'cmd': cmd, 'rank': rank, 'name': self.name, 'type': self.type, 'clock': self.req_clock}
         if cmd == 'request':
             data['version'] = self.version
-        elif cmd == 'allowed':
+        elif cmd == 'confirm':
             data['version'] = self.version
             data['variables'] = self.variables
         return data

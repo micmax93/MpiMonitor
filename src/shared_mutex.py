@@ -36,7 +36,7 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
         self.local_lock.release()
 
     def send_confirmation(self, target):  # wysłanie zezwolenia na wejście do sekcji krytycznej
-        data = self.mk_msg('allowed')
+        data = self.mk_msg('confirm')
         mpi_send(target, data)
         say("Confirmation sent to ", target)
 
