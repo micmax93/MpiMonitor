@@ -16,6 +16,7 @@ class SignalController:
         self.my_state = 'waiting'
         self.callback = callback
         data = self.mk_msg('request', forward=False)
+        # log(self.name, 'Broadcasting wait request')
         mpi_bcast(data)
 
     def mk_msg(self, command, forward, sender=None):  # generowanie treści komunikatu
@@ -26,17 +27,22 @@ class SignalController:
 
     def send_signal_all(self):
         data = self.mk_msg('signal', forward=False)
+        # log(self.name, 'Broadcasting signal_all')
         mpi_bcast(data)
 
     def send_signal_once(self, sender=None):
         data = self.mk_msg('signal', forward=True, sender=sender)
-        if len(self.waiting_list)>0:
-            mpi_send(self.waiting_list.pop(0), data)
+        if len(self.waiting_list) > 0:
+            recp = self.waiting_list.pop(0)
+            # log(self.name, 'Sending signal to ', recp)
+            mpi_send(recp, data)
 
     def on_request(self, sender, data):
+        # log(self.name, 'Adding ', sender, ' to waiting list')
         self.waiting_list.append(sender)
 
     def on_confirmation(self, sender, data):
+        # log(self.name, 'Removing ', sender, ' from waiting list')
         self.waiting_list.remove(sender)
 
     def on_signal_received(self, sender, forward):
@@ -44,6 +50,7 @@ class SignalController:
             return False
         if self.my_state == 'waiting':
             self.my_state = 'idle'
+            # log(self.name, 'Received signal from ', sender)
             data = self.mk_msg('confirm', forward=False)
             mpi_bcast(data)
             self.callback()

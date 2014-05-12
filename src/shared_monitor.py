@@ -25,13 +25,13 @@ class SharedContext:
             pass
         elif name.find('mx:') == 0:
             self.shared_objects[name] = SharedMutex(name)
-            say('Created '+name)
+            log('context', 'Created '+name)
         elif name.find('cv:') == 0:
             self.shared_objects[name] = SharedConditional(name)
-            say('Created '+name)
+            log('context', 'Created '+name)
         elif name.find('sv:') == 0:
             self.shared_objects[name] = SharedVariables(name)
-            say('Created '+name)
+            log('context', 'Created '+name)
         else:
             raise Exception('Invalid naming format for variable '+name)
 
@@ -47,7 +47,7 @@ class SharedMonitor(SharedContext):
         self.id = mpi_rank()
 
     def message_dispatcher(self):
-        say('Started dispatcher.')
+        log('monitor', 'Started dispatcher.')
         while True:
             data = mpi_recv()
             if data is not None:
@@ -64,7 +64,7 @@ class SharedMonitor(SharedContext):
                     if False not in self.finished:
                         break
         self.exit_lock.release()
-        say('Exiting.')
+        log('monitor', 'Exiting.')
 
     def start(self):
         mpi_barrier()
@@ -75,5 +75,5 @@ class SharedMonitor(SharedContext):
         data = {'cmd': 'finished', 'rank': self.id, 'name': self.id}
         mpi_bcast(data)
         mpi_send(self.id, data)
-        say('Finished.')
+        log('monitor', 'Finished.')
         self.exit_lock.acquire()

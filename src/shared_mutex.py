@@ -32,27 +32,26 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
         self.confirmations_tab = [False] * mpi_count()
         self.confirmations_tab[mpi_rank()] = True
         mpi_bcast(data)
-        say("Requesting ", self.name, " critical section")
+        log(self.name, 'Requesting critical section')
         self.local_lock.release()
 
     def send_confirmation(self, target):  # wysłanie zezwolenia na wejście do sekcji krytycznej
         data = self.mk_msg('confirm')
         mpi_send(target, data)
-        say("Confirmation sent to ", target)
+        log(self.name, "Confirmation sent to ", target)
 
     def exit_critical(self):  # procedura opuszczenia sekcji krytycznej
-        say(">>Exiting ", self.name, " critical section")
+        log(self.name, "Exiting critical section")
         self.my_state = 'idle'
-        say("Sending confirms to: ", self.waiting_set)
+        #log(self.name, "Sending confirms to: ", self.waiting_set)
         for e in self.waiting_set:
             self.send_confirmation(e)
         self.waiting_set = []
         self.confirmations_tab = [False] * mpi_count()
-        #mpi_send(mpi_rank(), self.mk_msg('job_done'))
 
     def critical_section(self):  # wywołanie funcji sekcji krytycznej
         #kod sekcji krytycznej
-        say(">>Entering ", self.name, " critical section")
+        log(self.name, "Entering critical section")
         if self.callback is not None:
             self.callback()
 
@@ -61,8 +60,8 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
         if self.my_state == 'waiting':
             if not self.confirmations_tab[sender]:
                 self.confirmations_tab[sender] = True
-            say(self.name, " confirmation received from ", sender, " - ",
-                self.confirmations_tab.count(True)-1, ' out of ', mpi_count() - 1)
+            #log(self.name, " Confirmation received from ", sender, " - ",
+            #   self.confirmations_tab.count(True)-1, ' out of ', mpi_count() - 1)
             if False not in self.confirmations_tab:
                 self.my_state = 'active'
                 self.critical_section()
@@ -72,7 +71,7 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
     def on_request(self, sender, data):  # zdarzenie otrzymania żądania dostępu
         self.local_lock.acquire()
         msg_clock = data['clock']
-        say("Received request from ", sender)
+        log(self.name, "Received request from ", sender)
         if self.my_state == 'idle':
             self.send_confirmation(sender)
         elif self.my_state == 'waiting':
@@ -82,10 +81,10 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
                 self.send_confirmation(sender)
             else:
                 self.waiting_set.append(sender)
-                say("Adding to waiting set ", sender)
+                #log(self.name, "Adding ", sender, " to waiting set")
         else:
             self.waiting_set.append(sender)
-            say("Adding to waiting set ", sender)
+            #log(self.name, "Adding to waiting set ", sender)
         self.my_clock = max(self.my_clock, msg_clock)
         self.local_lock.release()
 

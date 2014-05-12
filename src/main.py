@@ -6,6 +6,74 @@ from shared_monitor import SharedMonitor
 monitor = SharedMonitor()
 monitor.start()
 
+id = monitor.id
+buffer = monitor.get_variables('buffer')
+full = monitor.get_conditional('full')
+empty = monitor.get_conditional('empty')
+
+
+def init():
+    buffer.lock()
+    if buffer.version == 0:
+        log('USER','Setting initial buffer values')
+        buffer.set('curr', 0)
+        buffer.set('max', mpi_count()*2)
+        buffer.set('data', [])
+    buffer.unlock()
+init()
+
+
+def producer(limit):
+    buffer.lock()
+    val = 0
+    start = 0
+    while val < limit:
+        while buffer.get('curr') == buffer.get('max'):
+            log('$user', 'Added ', val-start, ' values')
+            full.wait(buffer)
+            start = val
+        data = buffer.get('data')
+        data.append(val)
+        log('$user', 'Adding "', val, '" to buffer')
+        curr = buffer.get('curr')
+        curr += 1
+        buffer.set('data', data)
+        buffer.set('curr', curr)
+        val += 1
+        empty.signal()  # if one
+    buffer.unlock()
+
+
+def consumer(limit):
+    n = 1
+    while n < limit:
+        buffer.lock()
+        while buffer.get('curr') == 0:
+            empty.wait(buffer)
+        data = buffer.get('data')
+        value = data.pop(0)
+        curr = buffer.get('curr')
+        curr -= 1
+        buffer.set('data', data)
+        buffer.set('curr', curr)
+        n += 1
+        full.signal()  # if full-1
+        buffer.unlock()
+        log('$user', 'Taking "', value, '" from buffer')
+
+cons = 15
+prod = cons * (mpi_count()-1)
+
+if id == 0:
+    producer(prod)
+else:
+    consumer(cons)
+
+monitor.stop()
+
+
+
+
 # mx = monitor.get_mutex('mutex')
 # mx.lock()
 # print('Yea!')
@@ -26,66 +94,6 @@ monitor.start()
 #
 # var_ns.unlock()
 
-id = monitor.id
-buffer = monitor.get_variables('buffer')
-full = monitor.get_conditional('full')
-empty = monitor.get_conditional('empty')
-
-
-buffer.lock()
-if buffer.version == 0:
-    print('Setting initial values @by ', monitor.id)
-    buffer.set('curr', 0)
-    buffer.set('max', mpi_count()*2)
-    buffer.set('data', [])
-buffer.unlock()
-
-
-def producer(limit):
-    buffer.lock()
-    val = 0
-    start = 0
-    while val < limit:
-        while buffer.get('curr') == buffer.get('max'):
-            print('Added ', val-start, ' values @by ', id)
-            full.wait(buffer)
-            start = val
-        data = buffer.get('data')
-        data.append(val)
-        print('+', val, ' add @by ', id)
-        curr = buffer.get('curr')
-        curr += 1
-        buffer.set('data', data)
-        buffer.set('curr', curr)
-        val += 1
-        empty.signal()  # if one
-    buffer.unlock()
-
-
-def consumer(limit):
-    n = 1
-    while n<limit:
-        buffer.lock()
-        while buffer.get('curr') == 0:
-            empty.wait(buffer)
-        data = buffer.get('data')
-        value = data.pop(0)
-        curr = buffer.get('curr')
-        curr -= 1
-        buffer.set('data', data)
-        buffer.set('curr', curr)
-        n += 1
-        full.signal()  # if full-1
-        buffer.unlock()
-        print('-', value, ' get @by ', id)
-
-cons = 15
-prod = cons * (mpi_count()-1)
-
-if id == 0:
-    producer(prod)
-else:
-    consumer(cons)
 
 # cv = monitor.get_conditional('alert')
 # mx = monitor.get_mutex('mutex')
@@ -104,4 +112,3 @@ else:
 #     print(mpi_rank(), ' @ Done')
 #     mx.unlock()
 
-monitor.stop()

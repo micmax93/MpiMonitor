@@ -1,5 +1,5 @@
+import inspect
 from mpi4py import MPI
-import time
 
 
 def mpi_send(target, data, tag=0):
@@ -28,5 +28,11 @@ def mpi_barrier():
     MPI.COMM_WORLD.barrier()
 
 
-def say(*args):
-    print(mpi_rank(), ' : ', *args, sep='')
+# rank: [type] [name] [operation] msg
+# def say(*args):
+#     print(mpi_rank(), ' : ', *args, sep='')
+
+
+def log(name, *args):
+    caller = inspect.stack()[1][3]
+    print(mpi_rank(), ' : %-10s ' % name, '@ %-18s: ' % caller, *args, sep='')
