@@ -15,11 +15,13 @@ empty = monitor.get_conditional('empty')
 def init():
     buffer.lock()
     if buffer.version == 0:
-        log('USER','Setting initial buffer values')
+        log('$user', 'Setting initial buffer values')
         buffer.set('curr', 0)
-        buffer.set('max', mpi_count()*2)
+        buffer.set('max', mpi_count() * 2)
         buffer.set('data', [])
     buffer.unlock()
+
+
 init()
 
 
@@ -29,7 +31,7 @@ def producer(limit):
     start = 0
     while val < limit:
         while buffer.get('curr') == buffer.get('max'):
-            log('$user', 'Added ', val-start, ' values')
+            log('$user', 'Added ', val - start, ' values')
             full.wait(buffer)
             start = val
         data = buffer.get('data')
@@ -61,8 +63,9 @@ def consumer(limit):
         buffer.unlock()
         log('$user', 'Taking "', value, '" from buffer')
 
+
 cons = 15
-prod = cons * (mpi_count()-1)
+prod = cons * (mpi_count() - 1)
 
 if id == 0:
     producer(prod)

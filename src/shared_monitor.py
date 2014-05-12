@@ -10,13 +10,13 @@ class SharedContext:
     access_lock = Lock()
 
     def get_mutex(self, name):
-        return self.get_raw('mx:'+name)
+        return self.get_raw('mx:' + name)
 
     def get_conditional(self, name):
-        return self.get_raw('cv:'+name)
+        return self.get_raw('cv:' + name)
 
     def get_variables(self, name):
-        return self.get_raw('sv:'+name)
+        return self.get_raw('sv:' + name)
 
     def get_raw(self, name):
         self.access_lock.acquire()
@@ -25,15 +25,15 @@ class SharedContext:
             pass
         elif name.find('mx:') == 0:
             self.shared_objects[name] = SharedMutex(name)
-            log('context', 'Created '+name)
+            log('context', 'Created ' + name)
         elif name.find('cv:') == 0:
             self.shared_objects[name] = SharedConditional(name)
-            log('context', 'Created '+name)
+            log('context', 'Created ' + name)
         elif name.find('sv:') == 0:
             self.shared_objects[name] = SharedVariables(name)
-            log('context', 'Created '+name)
+            log('context', 'Created ' + name)
         else:
-            raise Exception('Invalid naming format for variable '+name)
+            raise Exception('Invalid naming format for variable ' + name)
 
         self.access_lock.release()
         return self.shared_objects[name]
