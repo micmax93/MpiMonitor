@@ -3,13 +3,13 @@ from shared_mutex import SharedMutex
 
 
 class SharedVariables(SharedMutex):
-    variables = {}
-    version = 0
-    changed = False
 
     def __init__(self, name):
-        SharedMutex.__init__(self, name)
+        super().__init__(name)
         self.type = 'SharedVariables'
+        self.variables = {}
+        self.version = 0
+        self.changed = False
 
     def mk_msg(self, cmd):  # generowanie treści komunikatu
         rank = mpi_rank()

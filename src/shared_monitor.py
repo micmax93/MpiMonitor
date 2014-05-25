@@ -6,8 +6,9 @@ from my_mpi import *
 
 
 class SharedContext:
-    shared_objects = {}
-    access_lock = Lock()
+    def __init__(self):
+        self.shared_objects = {}
+        self.access_lock = Lock()
 
     def get_mutex(self, name):
         return self.get_raw('mx:' + name)
@@ -41,6 +42,7 @@ class SharedContext:
 
 class SharedMonitor(SharedContext):
     def __init__(self):
+        super().__init__()
         self.finished = [False] * mpi_count()
         self.exit_lock = Semaphore(value=0)
         self.dispatcher = None

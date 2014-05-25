@@ -4,13 +4,12 @@ from my_mpi import *
 
 
 class SignalController:
-    type = 'signal'
-    my_state = 'idle'
-    callback = empty_func
-    waiting_list = []
-
     def __init__(self, name):
         self.name = name
+        self.type = 'signal'
+        self.my_state = 'idle'
+        self.callback = empty_func
+        self.waiting_list = []
 
     def wait_for_signal(self, callback=empty_func):
         self.my_state = 'waiting'

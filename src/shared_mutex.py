@@ -4,18 +4,17 @@ from my_mpi import *
 
 
 class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
-    type = 'raw'
-    my_state = 'idle'
-    confirmations_tab = [False] * mpi_count()
-    waiting_set = []
-    callback = empty_func  # procedura wywoływana po uzyskaniu dostępu do sekcji krytycznej
-    local_lock = Lock()
-    my_clock = 0
-    req_clock = None
 
     def __init__(self, name):
         self.name = name
-        pass
+        self.type = 'raw'
+        self.my_state = 'idle'
+        self.confirmations_tab = [False] * mpi_count()
+        self.waiting_set = []
+        self.callback = empty_func  # procedura wywoływana po uzyskaniu dostępu do sekcji krytycznej
+        self.local_lock = Lock()
+        self.my_clock = 0
+        self.req_clock = None
 
     def mk_msg(self, cmd):  # generowanie treści komunikatu
         rank = mpi_rank()
@@ -91,7 +90,7 @@ class AccessController:  # Kolejka oparta o algorytm Ricarta-Agrawali
 
 class SharedMutex(AccessController):
     def __init__(self, name):
-        AccessController.__init__(self, name)
+        super().__init__(name)
         self.user_lock = Semaphore(value=0)
         self.type = 'SharedMutex'
 
